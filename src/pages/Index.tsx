@@ -1,19 +1,50 @@
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { useAuth } from '@/hooks/useAuth';
-import { SubscriptionCard } from '@/components/SubscriptionCard';
+import { SortableSubscriptionCard } from '@/components/SortableSubscriptionCard';
 import { AddSubscriptionDialog } from '@/components/AddSubscriptionDialog';
 import { RenewalTimeline } from '@/components/RenewalTimeline';
 import { CreditUsageChart } from '@/components/CreditUsageChart';
 import { CreditHistoryTable } from '@/components/CreditHistoryTable';
 import { CreditHistoryChart } from '@/components/CreditHistoryChart';
 import { AuthForm } from '@/components/AuthForm';
-import { getDaysUntilRenewal } from '@/lib/dateUtils';
 import { Wallet, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
-  const { subscriptions, loading: subsLoading, updateSubscription, addSubscription, deleteSubscription } = useSubscriptions();
+  const { subscriptions, loading: subsLoading, updateSubscription, addSubscription, deleteSubscription, reorderSubscriptions } = useSubscriptions();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      reorderSubscriptions(active.id as string, over.id as string);
+    }
+  };
 
   if (authLoading) {
     return (
@@ -26,15 +57,6 @@ const Index = () => {
   if (!user) {
     return <AuthForm />;
   }
-
-  const sortedSubscriptions = [...subscriptions].sort(
-    (a, b) => {
-      const billingCycleA = a.billing_cycle || 'monthly';
-      const billingCycleB = b.billing_cycle || 'monthly';
-      return getDaysUntilRenewal(a.renewal_day, billingCycleA, a.renewal_month) - 
-             getDaysUntilRenewal(b.renewal_day, billingCycleB, b.renewal_month);
-    }
-  );
 
   // Calculate total monthly cost (user enters monthly price for all subscriptions)
   const totalMonthly = subscriptions.reduce((sum, sub) => sum + Number(sub.price), 0);
@@ -74,18 +96,29 @@ const Index = () => {
           </div>
         )}
 
-        {/* Subscriptions Grid */}
-        {!subsLoading && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {sortedSubscriptions.map((subscription) => (
-              <SubscriptionCard
-                key={subscription.id}
-                subscription={subscription}
-                onUpdate={updateSubscription}
-                onDelete={deleteSubscription}
-              />
-            ))}
-          </div>
+        {/* Subscriptions Grid with Drag & Drop */}
+        {!subsLoading && subscriptions.length > 0 && (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={subscriptions.map(s => s.id)}
+              strategy={rectSortingStrategy}
+            >
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {subscriptions.map((subscription) => (
+                  <SortableSubscriptionCard
+                    key={subscription.id}
+                    subscription={subscription}
+                    onUpdate={updateSubscription}
+                    onDelete={deleteSubscription}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
 
         {!subsLoading && subscriptions.length === 0 && (

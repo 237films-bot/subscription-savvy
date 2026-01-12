@@ -76,6 +76,7 @@ export function useSubscriptions() {
     const { data, error } = await supabase
       .from('subscriptions')
       .select('*')
+      .order('position', { ascending: true })
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -115,11 +116,17 @@ export function useSubscriptions() {
   const addSubscription = async (subscription: Omit<Subscription, 'id'>) => {
     if (!user) return;
 
+    // Get max position
+    const maxPosition = subscriptions.length > 0 
+      ? Math.max(...subscriptions.map(s => s.position || 0)) + 1 
+      : 0;
+
     const { data, error } = await supabase
       .from('subscriptions')
       .insert({
         ...subscription,
         user_id: user.id,
+        position: maxPosition,
       })
       .select()
       .single();
@@ -128,6 +135,34 @@ export function useSubscriptions() {
       console.error('Error adding subscription:', error);
     } else if (data) {
       setSubscriptions((prev) => [...prev, data as Subscription]);
+    }
+  };
+
+  const reorderSubscriptions = async (activeId: string, overId: string) => {
+    const oldIndex = subscriptions.findIndex(s => s.id === activeId);
+    const newIndex = subscriptions.findIndex(s => s.id === overId);
+    
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const newSubscriptions = [...subscriptions];
+    const [removed] = newSubscriptions.splice(oldIndex, 1);
+    newSubscriptions.splice(newIndex, 0, removed);
+
+    // Update positions
+    const updates = newSubscriptions.map((sub, index) => ({
+      id: sub.id,
+      position: index,
+    }));
+
+    // Optimistic update
+    setSubscriptions(newSubscriptions.map((sub, index) => ({ ...sub, position: index })));
+
+    // Update in database
+    for (const update of updates) {
+      await supabase
+        .from('subscriptions')
+        .update({ position: update.position })
+        .eq('id', update.id);
     }
   };
 
@@ -144,5 +179,5 @@ export function useSubscriptions() {
     }
   };
 
-  return { subscriptions, loading, updateSubscription, addSubscription, deleteSubscription, refetch: fetchSubscriptions };
+  return { subscriptions, loading, updateSubscription, addSubscription, deleteSubscription, reorderSubscriptions, refetch: fetchSubscriptions };
 }

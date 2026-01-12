@@ -62,6 +62,7 @@ export type Database = {
           id: string
           last_reset_date: string | null
           name: string
+          position: number | null
           price: number
           renewal_day: number
           renewal_month: number | null
@@ -81,6 +82,7 @@ export type Database = {
           id?: string
           last_reset_date?: string | null
           name: string
+          position?: number | null
           price?: number
           renewal_day: number
           renewal_month?: number | null
@@ -100,6 +102,7 @@ export type Database = {
           id?: string
           last_reset_date?: string | null
           name?: string
+          position?: number | null
           price?: number
           renewal_day?: number
           renewal_month?: number | null
