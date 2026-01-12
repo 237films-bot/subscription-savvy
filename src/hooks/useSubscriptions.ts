@@ -38,6 +38,19 @@ export function useSubscriptions() {
     const needsReset = !lastReset || lastReset < lastRenewalDate;
     
     if (needsReset && today >= lastRenewalDate) {
+      // Record credit history before resetting
+      const creditsUsed = subscription.credits_total - subscription.credits_remaining;
+      if (creditsUsed > 0 || subscription.credits_remaining !== subscription.credits_total) {
+        await supabase
+          .from('credit_history')
+          .insert({
+            subscription_id: subscription.id,
+            user_id: user?.id,
+            credits_used: creditsUsed,
+            credits_total: subscription.credits_total,
+          });
+      }
+      
       const todayStr = today.toISOString().split('T')[0];
       await supabase
         .from('subscriptions')
