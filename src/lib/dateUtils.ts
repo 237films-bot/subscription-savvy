@@ -56,8 +56,8 @@ export function formatDate(date: Date, includeYear: boolean = false): string {
 }
 
 export function getUrgencyLevel(daysRemaining: number): 'critical' | 'warning' | 'normal' {
-  if (daysRemaining <= 3) return 'critical';
-  if (daysRemaining <= 7) return 'warning';
+  if (daysRemaining <= 6) return 'critical';
+  if (daysRemaining <= 11) return 'warning';
   return 'normal';
 }
 

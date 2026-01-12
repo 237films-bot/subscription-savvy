@@ -71,13 +71,6 @@ const Index = () => {
           </div>
         )}
 
-        {/* Credit Usage Chart */}
-        {subscriptions.length > 0 && (
-          <div className="mb-8">
-            <CreditUsageChart subscriptions={subscriptions} />
-          </div>
-        )}
-
         {/* Loading state */}
         {subsLoading && (
           <div className="text-center py-8">
@@ -110,9 +103,16 @@ const Index = () => {
           </div>
         )}
 
+        {/* Credit Usage Chart */}
+        {subscriptions.length > 0 && (
+          <div className="mt-8">
+            <CreditUsageChart subscriptions={subscriptions} />
+          </div>
+        )}
+
         {/* Footer - Total cost */}
         {subscriptions.length > 0 && (
-          <div className="mt-12 pt-6 border-t border-border">
+          <div className="mt-8 pt-6 border-t border-border">
             <div className="flex items-center justify-center gap-2 text-muted-foreground">
               <Wallet className="h-4 w-4" />
               <span className="text-sm">Coût mensuel total : <span className="font-semibold text-foreground">{totalMonthly.toFixed(0)}€</span></span>
