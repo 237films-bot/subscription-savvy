@@ -4,6 +4,7 @@ import { SubscriptionCard } from '@/components/SubscriptionCard';
 import { AddSubscriptionDialog } from '@/components/AddSubscriptionDialog';
 import { RenewalTimeline } from '@/components/RenewalTimeline';
 import { CreditUsageChart } from '@/components/CreditUsageChart';
+import { CreditHistoryTable } from '@/components/CreditHistoryTable';
 import { AuthForm } from '@/components/AuthForm';
 import { getDaysUntilRenewal } from '@/lib/dateUtils';
 import { Wallet, LogOut } from 'lucide-react';
@@ -101,6 +102,13 @@ const Index = () => {
         {subscriptions.length > 0 && (
           <div className="mt-8">
             <CreditUsageChart subscriptions={subscriptions} />
+          </div>
+        )}
+
+        {/* Credit History Table */}
+        {subscriptions.length > 0 && (
+          <div className="mt-8">
+            <CreditHistoryTable subscriptions={subscriptions} />
           </div>
         )}
 
