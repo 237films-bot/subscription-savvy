@@ -22,6 +22,7 @@ export type Database = {
           currency: string
           icon: string
           id: string
+          last_reset_date: string | null
           name: string
           price: number
           renewal_day: number
@@ -35,6 +36,7 @@ export type Database = {
           currency?: string
           icon?: string
           id?: string
+          last_reset_date?: string | null
           name: string
           price?: number
           renewal_day: number
@@ -48,6 +50,7 @@ export type Database = {
           currency?: string
           icon?: string
           id?: string
+          last_reset_date?: string | null
           name?: string
           price?: number
           renewal_day?: number
