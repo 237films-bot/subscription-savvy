@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Subscription } from '@/types/subscription';
+import { useCreditHistory } from '@/hooks/useCreditHistory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   LineChart,
@@ -29,9 +30,11 @@ const COLORS = [
 ];
 
 export function CreditHistoryChart({ subscriptions }: CreditHistoryChartProps) {
+  const { getMonthlyUsageBySubscription, loading } = useCreditHistory();
+  
   const chartData = useMemo(() => {
     const today = new Date();
-    const months: { key: string; label: string; date: Date }[] = [];
+    const months: { key: string; label: string }[] = [];
     
     // Generate last 6 months
     for (let i = 5; i >= 0; i--) {
@@ -39,43 +42,40 @@ export function CreditHistoryChart({ subscriptions }: CreditHistoryChartProps) {
       months.push({
         key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
         label: date.toLocaleDateString('fr-FR', { month: 'short' }),
-        date,
       });
     }
 
-    // Build chart data with simulated historical data based on current usage
-    // In production, this would come from credit_history table
-    return months.map((month, monthIndex) => {
+    const usageBySubscription = getMonthlyUsageBySubscription();
+
+    // Build chart data with real historical data
+    return months.map((month) => {
       const dataPoint: Record<string, string | number> = {
         month: month.label,
       };
 
       subscriptions.forEach((sub) => {
-        // Calculate usage for this month
-        // Current month uses actual data, previous months use simulated declining usage
-        const currentUsage = sub.credits_total - sub.credits_remaining;
-        const currentPercentage = sub.credits_total > 0 
-          ? Math.round((currentUsage / sub.credits_total) * 100) 
-          : 0;
-
-        if (monthIndex === months.length - 1) {
-          // Current month - use actual data
-          dataPoint[sub.name] = currentPercentage;
+        const subHistory = usageBySubscription.get(sub.id);
+        const monthData = subHistory?.find(m => m.month === month.key);
+        
+        if (monthData) {
+          // Use real data from credit_history
+          dataPoint[sub.name] = monthData.percentage;
         } else {
-          // Simulate historical data with some variance
-          // This creates a realistic-looking trend
-          const baseVariance = Math.random() * 30 - 15;
-          const trendFactor = (monthIndex + 1) / months.length;
-          const simulatedPercentage = Math.max(0, Math.min(100, 
-            Math.round(currentPercentage * trendFactor + baseVariance)
-          ));
-          dataPoint[sub.name] = simulatedPercentage;
+          // No data for this month - leave empty (will show gap in line)
+          dataPoint[sub.name] = 0;
         }
       });
 
       return dataPoint;
     });
-  }, [subscriptions]);
+  }, [subscriptions, getMonthlyUsageBySubscription]);
+
+  // Check if there's any real data to display
+  const hasRealData = useMemo(() => {
+    return chartData.some(point => 
+      subscriptions.some(sub => (point[sub.name] as number) > 0)
+    );
+  }, [chartData, subscriptions]);
 
   if (subscriptions.length === 0) {
     return null;
@@ -87,57 +87,68 @@ export function CreditHistoryChart({ subscriptions }: CreditHistoryChartProps) {
         <CardTitle className="text-lg">Évolution de la consommation (6 mois)</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={chartData}
-              margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis 
-                dataKey="month" 
-                tick={{ fontSize: 12 }}
-                className="text-muted-foreground"
-              />
-              <YAxis 
-                tick={{ fontSize: 12 }}
-                domain={[0, 100]}
-                tickFormatter={(value) => `${value}%`}
-                className="text-muted-foreground"
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px',
-                }}
-                labelStyle={{ color: 'hsl(var(--foreground))' }}
-                formatter={(value: number, name: string) => [
-                  `${value}%`,
-                  name,
-                ]}
-              />
-              <Legend 
-                wrapperStyle={{ fontSize: '12px' }}
-                formatter={(value) => {
-                  const sub = subscriptions.find(s => s.name === value);
-                  return sub ? `${sub.icon} ${value}` : value;
-                }}
-              />
-              {subscriptions.map((sub, index) => (
-                <Line
-                  key={sub.id}
-                  type="monotone"
-                  dataKey={sub.name}
-                  stroke={COLORS[index % COLORS.length]}
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
+        {loading ? (
+          <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
+            Chargement...
+          </div>
+        ) : !hasRealData ? (
+          <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
+            Pas encore de données d'historique. L'historique se remplira au fur et à mesure des renouvellements.
+          </div>
+        ) : (
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={chartData}
+                margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis 
+                  dataKey="month" 
+                  tick={{ fontSize: 12 }}
+                  className="text-muted-foreground"
                 />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                  domain={[0, 100]}
+                  tickFormatter={(value) => `${value}%`}
+                  className="text-muted-foreground"
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                  }}
+                  labelStyle={{ color: 'hsl(var(--foreground))' }}
+                  formatter={(value: number, name: string) => [
+                    `${value}%`,
+                    name,
+                  ]}
+                />
+                <Legend 
+                  wrapperStyle={{ fontSize: '12px' }}
+                  formatter={(value) => {
+                    const sub = subscriptions.find(s => s.name === value);
+                    return sub ? `${sub.icon} ${value}` : value;
+                  }}
+                />
+                {subscriptions.map((sub, index) => (
+                  <Line
+                    key={sub.id}
+                    type="monotone"
+                    dataKey={sub.name}
+                    stroke={COLORS[index % COLORS.length]}
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                    connectNulls={false}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

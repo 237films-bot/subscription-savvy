@@ -66,7 +66,7 @@ export function useCreditHistory() {
     }
   };
 
-  // Aggregate by month
+  // Aggregate by month (global)
   const getMonthlyUsage = (): MonthlyUsage[] => {
     const monthlyData = new Map<string, { used: number; total: number }>();
 
@@ -92,5 +92,43 @@ export function useCreditHistory() {
       .slice(-6); // Last 6 months
   };
 
-  return { history, loading, recordUsage, getMonthlyUsage, refetch: fetchHistory };
+  // Aggregate by month per subscription
+  const getMonthlyUsageBySubscription = (): Map<string, MonthlyUsage[]> => {
+    const subscriptionData = new Map<string, Map<string, { used: number; total: number }>>();
+
+    history.forEach((entry) => {
+      const date = new Date(entry.recorded_at);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!subscriptionData.has(entry.subscription_id)) {
+        subscriptionData.set(entry.subscription_id, new Map());
+      }
+      
+      const subMonthly = subscriptionData.get(entry.subscription_id)!;
+      const existing = subMonthly.get(monthKey) || { used: 0, total: 0 };
+      subMonthly.set(monthKey, {
+        used: existing.used + entry.credits_used,
+        total: existing.total + entry.credits_total,
+      });
+    });
+
+    const result = new Map<string, MonthlyUsage[]>();
+    
+    subscriptionData.forEach((monthlyMap, subscriptionId) => {
+      const monthlyArray = Array.from(monthlyMap.entries())
+        .map(([month, data]) => ({
+          month,
+          used: data.used,
+          total: data.total,
+          percentage: data.total > 0 ? Math.round((data.used / data.total) * 100) : 0,
+        }))
+        .sort((a, b) => a.month.localeCompare(b.month));
+      
+      result.set(subscriptionId, monthlyArray);
+    });
+
+    return result;
+  };
+
+  return { history, loading, recordUsage, getMonthlyUsage, getMonthlyUsageBySubscription, refetch: fetchHistory };
 }
