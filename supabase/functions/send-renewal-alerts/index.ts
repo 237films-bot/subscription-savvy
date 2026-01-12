@@ -15,15 +15,18 @@ interface Subscription {
   renewal_month?: number;
   billing_cycle: string;
   user_id: string;
+  alerts_enabled?: boolean;
 }
 
-interface UserProfile {
-  email: string;
+interface UserWithEmail {
+  id: string;
+  email?: string;
 }
 
-// Subscriptions to send alerts for
-const ALERT_SUBSCRIPTIONS = ['Higgsfield', 'GensPark'];
-// Days before renewal to send alerts
+/**
+ * Days before renewal to send alerts
+ * Alerts are sent at 11 days (early warning), 5 days (reminder), and 1 day (urgent)
+ */
 const ALERT_DAYS = [11, 5, 1];
 
 function getDaysUntilRenewal(
@@ -93,19 +96,48 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch subscriptions that need alerts
+    /**
+     * Fetch all subscriptions where alerts are enabled
+     * If alerts_enabled column doesn't exist yet, fetch all subscriptions as fallback
+     */
     const { data: subscriptions, error } = await supabase
       .from('subscriptions')
-      .select('*')
-      .in('name', ALERT_SUBSCRIPTIONS);
+      .select('*, user:user_id(email)');
 
     if (error) {
+      console.error("Error fetching subscriptions:", error);
       throw error;
     }
 
-    const alertsSent: string[] = [];
+    if (!subscriptions || subscriptions.length === 0) {
+      console.log("No subscriptions found");
+      return new Response(
+        JSON.stringify({ message: "No subscriptions found" }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
 
-    for (const sub of subscriptions || []) {
+    const alertsSent: string[] = [];
+    const errors: string[] = [];
+
+    for (const sub of subscriptions) {
+      // Skip if alerts are explicitly disabled (if the column exists)
+      if (sub.alerts_enabled === false) {
+        console.log(`Alerts disabled for ${sub.name}, skipping`);
+        continue;
+      }
+
+      // Get user email - try from joined user data or fall back to env variable
+      const userEmail = (sub as any).user?.email || Deno.env.get("ALERT_EMAIL");
+
+      if (!userEmail) {
+        console.log(`No email found for subscription ${sub.name}, skipping`);
+        errors.push(`No email for ${sub.name}`);
+        continue;
+      }
       const daysUntil = getDaysUntilRenewal(sub.renewal_day, sub.billing_cycle, sub.renewal_month);
       
       // Check if we should send an alert for this day
@@ -155,9 +187,12 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     return new Response(
-      JSON.stringify({ 
-        message: "Alerts processed", 
-        alertsSent 
+      JSON.stringify({
+        message: "Alerts processed",
+        alertsSent,
+        errors: errors.length > 0 ? errors : undefined,
+        totalSubscriptions: subscriptions.length,
+        alertsEnabled: subscriptions.filter(s => s.alerts_enabled !== false).length,
       }),
       {
         status: 200,
