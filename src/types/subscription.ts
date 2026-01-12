@@ -2,9 +2,9 @@ export interface Subscription {
   id: string;
   name: string;
   icon: string;
-  renewalDay: number;
+  renewal_day: number;
   price: number;
-  creditsTotal: number;
-  creditsRemaining: number;
+  credits_total: number;
+  credits_remaining: number;
   currency: string;
 }

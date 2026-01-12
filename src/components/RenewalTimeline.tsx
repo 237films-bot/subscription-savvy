@@ -9,8 +9,8 @@ export function RenewalTimeline({ subscriptions }: RenewalTimelineProps) {
   const sorted = [...subscriptions]
     .map((sub) => ({
       ...sub,
-      daysUntil: getDaysUntilRenewal(sub.renewalDay),
-      renewalDate: getNextRenewalDate(sub.renewalDay),
+      daysUntil: getDaysUntilRenewal(sub.renewal_day),
+      renewalDate: getNextRenewalDate(sub.renewal_day),
     }))
     .sort((a, b) => a.daysUntil - b.daysUntil);
 

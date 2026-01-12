@@ -1,110 +1,93 @@
 import { useState, useEffect } from 'react';
-import { Subscription } from '@/types/subscription';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
 
-const DEFAULT_SUBSCRIPTIONS: Subscription[] = [
-  {
-    id: '1',
-    name: 'ChatGPT Plus',
-    icon: '🤖',
-    renewalDay: 15,
-    price: 20,
-    creditsTotal: 100,
-    creditsRemaining: 45,
-    currency: '€',
-  },
-  {
-    id: '2',
-    name: 'Lovable',
-    icon: '💜',
-    renewalDay: 8,
-    price: 20,
-    creditsTotal: 500,
-    creditsRemaining: 120,
-    currency: '€',
-  },
-  {
-    id: '3',
-    name: 'Higgsfield',
-    icon: '🎬',
-    renewalDay: 22,
-    price: 15,
-    creditsTotal: 50,
-    creditsRemaining: 30,
-    currency: '€',
-  },
-  {
-    id: '4',
-    name: 'Gemini Advanced',
-    icon: '✨',
-    renewalDay: 5,
-    price: 22,
-    creditsTotal: 200,
-    creditsRemaining: 80,
-    currency: '€',
-  },
-  {
-    id: '5',
-    name: 'Genspark',
-    icon: '⚡',
-    renewalDay: 18,
-    price: 10,
-    creditsTotal: 100,
-    creditsRemaining: 65,
-    currency: '€',
-  },
-  {
-    id: '6',
-    name: 'Freepik',
-    icon: '🎨',
-    renewalDay: 1,
-    price: 12,
-    creditsTotal: 100,
-    creditsRemaining: 25,
-    currency: '€',
-  },
-];
-
-const STORAGE_KEY = 'ai-subscriptions';
+export interface Subscription {
+  id: string;
+  name: string;
+  icon: string;
+  renewal_day: number;
+  price: number;
+  credits_total: number;
+  credits_remaining: number;
+  currency: string;
+}
 
 export function useSubscriptions() {
+  const { user } = useAuth();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchSubscriptions = async () => {
+    if (!user) {
+      setSubscriptions([]);
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching subscriptions:', error);
+    } else {
+      setSubscriptions(data || []);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      setSubscriptions(JSON.parse(stored));
+    fetchSubscriptions();
+  }, [user]);
+
+  const updateSubscription = async (id: string, updates: Partial<Subscription>) => {
+    const { error } = await supabase
+      .from('subscriptions')
+      .update(updates)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating subscription:', error);
     } else {
-      setSubscriptions(DEFAULT_SUBSCRIPTIONS);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_SUBSCRIPTIONS));
-    }
-  }, []);
-
-  const updateSubscription = (id: string, updates: Partial<Subscription>) => {
-    setSubscriptions((prev) => {
-      const updated = prev.map((sub) =>
-        sub.id === id ? { ...sub, ...updates } : sub
+      setSubscriptions((prev) =>
+        prev.map((sub) => (sub.id === id ? { ...sub, ...updates } : sub))
       );
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    });
+    }
   };
 
-  const addSubscription = (subscription: Omit<Subscription, 'id'>) => {
-    const newSub = { ...subscription, id: Date.now().toString() };
-    setSubscriptions((prev) => {
-      const updated = [...prev, newSub];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    });
+  const addSubscription = async (subscription: Omit<Subscription, 'id'>) => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .insert({
+        ...subscription,
+        user_id: user.id,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding subscription:', error);
+    } else if (data) {
+      setSubscriptions((prev) => [...prev, data]);
+    }
   };
 
-  const deleteSubscription = (id: string) => {
-    setSubscriptions((prev) => {
-      const updated = prev.filter((sub) => sub.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    });
+  const deleteSubscription = async (id: string) => {
+    const { error } = await supabase
+      .from('subscriptions')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting subscription:', error);
+    } else {
+      setSubscriptions((prev) => prev.filter((sub) => sub.id !== id));
+    }
   };
 
-  return { subscriptions, updateSubscription, addSubscription, deleteSubscription };
+  return { subscriptions, loading, updateSubscription, addSubscription, deleteSubscription, refetch: fetchSubscriptions };
 }
