@@ -24,4 +24,5 @@ export interface Subscription {
   trial_end_date?: string;
   last_reset_date?: string;
   credits_tracking_disabled?: boolean;
+  position?: number;
 }
