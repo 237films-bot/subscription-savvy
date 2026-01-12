@@ -24,31 +24,31 @@ const EMOJI_OPTIONS = ['🤖', '💜', '🎬', '✨', '⚡', '🎨', '🧠', '�
 
 export function SubscriptionCard({ subscription, onUpdate, onDelete }: SubscriptionCardProps) {
   const [isEditingCredits, setIsEditingCredits] = useState(false);
-  const [editCredits, setEditCredits] = useState(subscription.creditsRemaining.toString());
+  const [editCredits, setEditCredits] = useState(subscription.credits_remaining.toString());
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({
     name: subscription.name,
     icon: subscription.icon,
-    renewalDay: subscription.renewalDay.toString(),
+    renewal_day: subscription.renewal_day.toString(),
     price: subscription.price.toString(),
-    creditsTotal: subscription.creditsTotal.toString(),
+    credits_total: subscription.credits_total.toString(),
   });
 
-  const daysUntil = getDaysUntilRenewal(subscription.renewalDay);
-  const renewalDate = getNextRenewalDate(subscription.renewalDay);
+  const daysUntil = getDaysUntilRenewal(subscription.renewal_day);
+  const renewalDate = getNextRenewalDate(subscription.renewal_day);
   const urgency = getUrgencyLevel(daysUntil);
-  const creditsPercentage = (subscription.creditsRemaining / subscription.creditsTotal) * 100;
+  const creditsPercentage = (subscription.credits_remaining / subscription.credits_total) * 100;
 
   const handleSaveCredits = () => {
     const newCredits = parseInt(editCredits, 10);
     if (!isNaN(newCredits) && newCredits >= 0) {
-      onUpdate(subscription.id, { creditsRemaining: Math.min(newCredits, subscription.creditsTotal) });
+      onUpdate(subscription.id, { credits_remaining: Math.min(newCredits, subscription.credits_total) });
     }
     setIsEditingCredits(false);
   };
 
   const handleCancelCredits = () => {
-    setEditCredits(subscription.creditsRemaining.toString());
+    setEditCredits(subscription.credits_remaining.toString());
     setIsEditingCredits(false);
   };
 
@@ -56,9 +56,9 @@ export function SubscriptionCard({ subscription, onUpdate, onDelete }: Subscript
     onUpdate(subscription.id, {
       name: editForm.name,
       icon: editForm.icon,
-      renewalDay: parseInt(editForm.renewalDay, 10),
+      renewal_day: parseInt(editForm.renewal_day, 10),
       price: parseFloat(editForm.price),
-      creditsTotal: parseInt(editForm.creditsTotal, 10),
+      credits_total: parseInt(editForm.credits_total, 10),
     });
     setIsEditDialogOpen(false);
   };
@@ -67,9 +67,9 @@ export function SubscriptionCard({ subscription, onUpdate, onDelete }: Subscript
     setEditForm({
       name: subscription.name,
       icon: subscription.icon,
-      renewalDay: subscription.renewalDay.toString(),
+      renewal_day: subscription.renewal_day.toString(),
       price: subscription.price.toString(),
-      creditsTotal: subscription.creditsTotal.toString(),
+      credits_total: subscription.credits_total.toString(),
     });
     setIsEditDialogOpen(true);
   };
@@ -151,9 +151,9 @@ export function SubscriptionCard({ subscription, onUpdate, onDelete }: Subscript
                       onChange={(e) => setEditCredits(e.target.value)}
                       className="h-7 w-16 text-right text-sm"
                       min={0}
-                      max={subscription.creditsTotal}
+                      max={subscription.credits_total}
                     />
-                    <span className="text-sm text-muted-foreground">/ {subscription.creditsTotal}</span>
+                    <span className="text-sm text-muted-foreground">/ {subscription.credits_total}</span>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSaveCredits}>
                       <Check className="h-3 w-3" />
                     </Button>
@@ -167,9 +167,9 @@ export function SubscriptionCard({ subscription, onUpdate, onDelete }: Subscript
                     onClick={() => setIsEditingCredits(true)}
                   >
                     <span className="font-semibold text-foreground">
-                      {subscription.creditsRemaining}
+                      {subscription.credits_remaining}
                     </span>
-                    <span className="text-sm text-muted-foreground">/ {subscription.creditsTotal}</span>
+                    <span className="text-sm text-muted-foreground">/ {subscription.credits_total}</span>
                   </button>
                 )}
               </div>
@@ -221,8 +221,8 @@ export function SubscriptionCard({ subscription, onUpdate, onDelete }: Subscript
                   type="number"
                   min={1}
                   max={31}
-                  value={editForm.renewalDay}
-                  onChange={(e) => setEditForm({ ...editForm, renewalDay: e.target.value })}
+                  value={editForm.renewal_day}
+                  onChange={(e) => setEditForm({ ...editForm, renewal_day: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -242,8 +242,8 @@ export function SubscriptionCard({ subscription, onUpdate, onDelete }: Subscript
               <Input
                 id="edit-credits"
                 type="number"
-                value={editForm.creditsTotal}
-                onChange={(e) => setEditForm({ ...editForm, creditsTotal: e.target.value })}
+                value={editForm.credits_total}
+                onChange={(e) => setEditForm({ ...editForm, credits_total: e.target.value })}
               />
             </div>
 

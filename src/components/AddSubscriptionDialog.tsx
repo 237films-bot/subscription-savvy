@@ -34,10 +34,10 @@ export function AddSubscriptionDialog({ onAdd }: AddSubscriptionDialogProps) {
     onAdd({
       name,
       icon,
-      renewalDay: parseInt(renewalDay, 10),
+      renewal_day: parseInt(renewalDay, 10),
       price: parseFloat(price),
-      creditsTotal: parseInt(creditsTotal, 10),
-      creditsRemaining: parseInt(creditsTotal, 10),
+      credits_total: parseInt(creditsTotal, 10),
+      credits_remaining: parseInt(creditsTotal, 10),
       currency: '€',
     });
 
@@ -80,7 +80,7 @@ export function AddSubscriptionDialog({ onAdd }: AddSubscriptionDialogProps) {
                 <button
                   key={emoji}
                   type="button"
-                  className={`text-2xl p-2 rounded-sm transition-colors ${
+                  className={`text-2xl p-2 rounded-md transition-colors ${
                     icon === emoji ? 'bg-primary text-primary-foreground' : 'bg-accent hover:bg-muted'
                   }`}
                   onClick={() => setIcon(emoji)}

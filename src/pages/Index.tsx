@@ -1,18 +1,34 @@
 import { useSubscriptions } from '@/hooks/useSubscriptions';
+import { useAuth } from '@/hooks/useAuth';
 import { SubscriptionCard } from '@/components/SubscriptionCard';
 import { AddSubscriptionDialog } from '@/components/AddSubscriptionDialog';
 import { RenewalTimeline } from '@/components/RenewalTimeline';
+import { AuthForm } from '@/components/AuthForm';
 import { getDaysUntilRenewal } from '@/lib/dateUtils';
-import { Wallet } from 'lucide-react';
+import { Wallet, LogOut } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const Index = () => {
-  const { subscriptions, updateSubscription, addSubscription, deleteSubscription } = useSubscriptions();
+  const { user, loading: authLoading, signOut } = useAuth();
+  const { subscriptions, loading: subsLoading, updateSubscription, addSubscription, deleteSubscription } = useSubscriptions();
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Chargement...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthForm />;
+  }
 
   const sortedSubscriptions = [...subscriptions].sort(
-    (a, b) => getDaysUntilRenewal(a.renewalDay) - getDaysUntilRenewal(b.renewalDay)
+    (a, b) => getDaysUntilRenewal(a.renewal_day) - getDaysUntilRenewal(b.renewal_day)
   );
 
-  const totalMonthly = subscriptions.reduce((sum, sub) => sum + sub.price, 0);
+  const totalMonthly = subscriptions.reduce((sum, sub) => sum + Number(sub.price), 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -27,7 +43,12 @@ const Index = () => {
               Suivez vos crédits et dates de renouvellement
             </p>
           </div>
-          <AddSubscriptionDialog onAdd={addSubscription} />
+          <div className="flex items-center gap-2">
+            <AddSubscriptionDialog onAdd={addSubscription} />
+            <Button variant="ghost" size="icon" onClick={signOut}>
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Timeline - Most important */}
@@ -37,19 +58,28 @@ const Index = () => {
           </div>
         )}
 
-        {/* Subscriptions Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {sortedSubscriptions.map((subscription) => (
-            <SubscriptionCard
-              key={subscription.id}
-              subscription={subscription}
-              onUpdate={updateSubscription}
-              onDelete={deleteSubscription}
-            />
-          ))}
-        </div>
+        {/* Loading state */}
+        {subsLoading && (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">Chargement des abonnements...</p>
+          </div>
+        )}
 
-        {subscriptions.length === 0 && (
+        {/* Subscriptions Grid */}
+        {!subsLoading && (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {sortedSubscriptions.map((subscription) => (
+              <SubscriptionCard
+                key={subscription.id}
+                subscription={subscription}
+                onUpdate={updateSubscription}
+                onDelete={deleteSubscription}
+              />
+            ))}
+          </div>
+        )}
+
+        {!subsLoading && subscriptions.length === 0 && (
           <div className="mt-12 text-center">
             <p className="text-muted-foreground">
               Aucun abonnement pour le moment.
