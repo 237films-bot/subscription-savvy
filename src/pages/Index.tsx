@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { SubscriptionCard } from '@/components/SubscriptionCard';
 import { AddSubscriptionDialog } from '@/components/AddSubscriptionDialog';
 import { RenewalTimeline } from '@/components/RenewalTimeline';
+import { CreditUsageChart } from '@/components/CreditUsageChart';
 import { AuthForm } from '@/components/AuthForm';
 import { getDaysUntilRenewal } from '@/lib/dateUtils';
 import { Wallet, LogOut } from 'lucide-react';
@@ -25,10 +26,22 @@ const Index = () => {
   }
 
   const sortedSubscriptions = [...subscriptions].sort(
-    (a, b) => getDaysUntilRenewal(a.renewal_day) - getDaysUntilRenewal(b.renewal_day)
+    (a, b) => {
+      const billingCycleA = a.billing_cycle || 'monthly';
+      const billingCycleB = b.billing_cycle || 'monthly';
+      return getDaysUntilRenewal(a.renewal_day, billingCycleA, a.renewal_month) - 
+             getDaysUntilRenewal(b.renewal_day, billingCycleB, b.renewal_month);
+    }
   );
 
-  const totalMonthly = subscriptions.reduce((sum, sub) => sum + Number(sub.price), 0);
+  // Calculate total monthly cost (convert annual to monthly)
+  const totalMonthly = subscriptions.reduce((sum, sub) => {
+    const price = Number(sub.price);
+    if (sub.billing_cycle === 'annual') {
+      return sum + (price / 12);
+    }
+    return sum + price;
+  }, 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -55,6 +68,13 @@ const Index = () => {
         {subscriptions.length > 0 && (
           <div className="mb-8">
             <RenewalTimeline subscriptions={subscriptions} />
+          </div>
+        )}
+
+        {/* Credit Usage Chart */}
+        {subscriptions.length > 0 && (
+          <div className="mb-8">
+            <CreditUsageChart subscriptions={subscriptions} />
           </div>
         )}
 
