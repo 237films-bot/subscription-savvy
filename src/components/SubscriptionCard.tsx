@@ -123,7 +123,7 @@ export function SubscriptionCard({ subscription, onUpdate, onDelete }: Subscript
                 <h3 className="font-semibold text-foreground">{subscription.name}</h3>
                 <div className="flex items-center gap-2">
                   <p className="text-sm text-muted-foreground">
-                    {subscription.price}{subscription.currency}/{isAnnual ? 'an' : 'mois'}
+                    {subscription.price}{subscription.currency}/mois
                   </p>
                   {subscription.category && (
                     <Badge variant="secondary" className="text-xs">
