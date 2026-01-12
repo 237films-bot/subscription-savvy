@@ -23,4 +23,5 @@ export interface Subscription {
   billing_cycle?: BillingCycle;
   trial_end_date?: string;
   last_reset_date?: string;
+  credits_tracking_disabled?: boolean;
 }

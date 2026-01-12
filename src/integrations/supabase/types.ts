@@ -56,6 +56,7 @@ export type Database = {
           created_at: string
           credits_remaining: number
           credits_total: number
+          credits_tracking_disabled: boolean | null
           currency: string
           icon: string
           id: string
@@ -74,6 +75,7 @@ export type Database = {
           created_at?: string
           credits_remaining?: number
           credits_total?: number
+          credits_tracking_disabled?: boolean | null
           currency?: string
           icon?: string
           id?: string
@@ -92,6 +94,7 @@ export type Database = {
           created_at?: string
           credits_remaining?: number
           credits_total?: number
+          credits_tracking_disabled?: boolean | null
           currency?: string
           icon?: string
           id?: string
