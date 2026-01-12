@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Pencil, Check, X, Trash2, AlertTriangle, Clock } from 'lucide-react';
+import { Pencil, Check, X, Trash2, AlertTriangle, Clock, EyeOff } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -49,6 +49,7 @@ export function SubscriptionCard({ subscription, onUpdate, onDelete }: Subscript
     category: subscription.category || 'IA',
     billing_cycle: billingCycle,
     trial_end_date: subscription.trial_end_date || '',
+    credits_tracking_disabled: subscription.credits_tracking_disabled || false,
   });
 
   const daysUntil = getDaysUntilRenewal(subscription.renewal_day, billingCycle, subscription.renewal_month);
@@ -58,6 +59,7 @@ export function SubscriptionCard({ subscription, onUpdate, onDelete }: Subscript
   const lowCredits = isLowCredits(subscription.credits_remaining, subscription.credits_total);
   const trialActive = isTrialActive(subscription.trial_end_date);
   const trialDaysLeft = subscription.trial_end_date ? getDaysUntilTrialEnd(subscription.trial_end_date) : null;
+  const creditsDisabled = subscription.credits_tracking_disabled || false;
 
   const handleSaveCredits = () => {
     const newCredits = parseInt(editCredits, 10);
@@ -99,13 +101,26 @@ export function SubscriptionCard({ subscription, onUpdate, onDelete }: Subscript
       category: subscription.category || 'IA',
       billing_cycle: billingCycle,
       trial_end_date: subscription.trial_end_date || '',
+      credits_tracking_disabled: subscription.credits_tracking_disabled || false,
     });
     setIsEditDialogOpen(true);
   };
 
+  const toggleCreditsTracking = () => {
+    onUpdate(subscription.id, { credits_tracking_disabled: !creditsDisabled });
+  };
+
   return (
     <>
-      <Card className="group relative overflow-hidden transition-all hover:shadow-lg border-border/50 hover:border-primary/30">
+      <Card className={`group relative overflow-hidden transition-all hover:shadow-lg border-border/50 hover:border-primary/30 ${creditsDisabled ? 'opacity-60' : ''}`}>
+        {creditsDisabled && (
+          <div className="absolute top-2 right-2 z-10">
+            <Badge variant="secondary" className="text-xs gap-1">
+              <EyeOff className="h-3 w-3" />
+              Crédits masqués
+            </Badge>
+          </div>
+        )}
         <div
           className={`absolute top-0 left-0 h-1 w-full ${
             urgency === 'critical'
@@ -187,54 +202,80 @@ export function SubscriptionCard({ subscription, onUpdate, onDelete }: Subscript
             </div>
 
             {/* Credits */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
+            {creditsDisabled ? (
+              <div className="flex items-center justify-between p-3 rounded-md bg-muted/30 border border-dashed border-border">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Crédits</span>
-                  {lowCredits && (
-                    <AlertTriangle className="h-4 w-4 text-warning" />
-                  )}
+                  <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Suivi des crédits désactivé</span>
                 </div>
-                {isEditingCredits ? (
-                  <div className="flex items-center gap-1">
-                    <Input
-                      type="number"
-                      value={editCredits}
-                      onChange={(e) => setEditCredits(e.target.value)}
-                      className="h-7 w-16 text-right text-sm"
-                      min={0}
-                      max={subscription.credits_total}
-                    />
-                    <span className="text-sm text-muted-foreground">/ {subscription.credits_total}</span>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSaveCredits}>
-                      <Check className="h-3 w-3" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCancelCredits}>
-                      <X className="h-3 w-3" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleCreditsTracking}
+                  className="text-xs"
+                >
+                  Réactiver
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Crédits</span>
+                    {lowCredits && (
+                      <AlertTriangle className="h-4 w-4 text-warning" />
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={toggleCreditsTracking}
+                      title="Masquer le suivi des crédits"
+                    >
+                      <EyeOff className="h-3 w-3 text-muted-foreground" />
                     </Button>
                   </div>
-                ) : (
-                  <button
-                    className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
-                    onClick={() => setIsEditingCredits(true)}
-                  >
-                    <span className={`font-semibold ${lowCredits ? 'text-warning' : 'text-foreground'}`}>
-                      {subscription.credits_remaining}
-                    </span>
-                    <span className="text-sm text-muted-foreground">/ {subscription.credits_total}</span>
-                  </button>
+                  {isEditingCredits ? (
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        value={editCredits}
+                        onChange={(e) => setEditCredits(e.target.value)}
+                        className="h-7 w-16 text-right text-sm"
+                        min={0}
+                        max={subscription.credits_total}
+                      />
+                      <span className="text-sm text-muted-foreground">/ {subscription.credits_total}</span>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSaveCredits}>
+                        <Check className="h-3 w-3" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCancelCredits}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <button
+                      className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
+                      onClick={() => setIsEditingCredits(true)}
+                    >
+                      <span className={`font-semibold ${lowCredits ? 'text-warning' : 'text-foreground'}`}>
+                        {subscription.credits_remaining}
+                      </span>
+                      <span className="text-sm text-muted-foreground">/ {subscription.credits_total}</span>
+                    </button>
+                  )}
+                </div>
+                <Progress 
+                  value={creditsPercentage} 
+                  className={`h-2 ${lowCredits ? '[&>div]:bg-warning' : ''}`} 
+                />
+                {lowCredits && (
+                  <p className="text-xs text-warning">
+                    ⚠️ Moins de 20% de crédits restants
+                  </p>
                 )}
               </div>
-              <Progress 
-                value={creditsPercentage} 
-                className={`h-2 ${lowCredits ? '[&>div]:bg-warning' : ''}`} 
-              />
-              {lowCredits && (
-                <p className="text-xs text-warning">
-                  ⚠️ Moins de 20% de crédits restants
-                </p>
-              )}
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>
