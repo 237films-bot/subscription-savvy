@@ -7,6 +7,7 @@ interface RenewalTimelineProps {
 
 export function RenewalTimeline({ subscriptions }: RenewalTimelineProps) {
   const sorted = [...subscriptions]
+    .filter((sub) => !sub.credits_tracking_disabled) // Exclude disabled subscriptions
     .map((sub) => {
       const billingCycle = sub.billing_cycle || 'monthly';
       const isAnnual = billingCycle === 'annual';
