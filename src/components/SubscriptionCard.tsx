@@ -123,7 +123,9 @@ export function SubscriptionCard({ subscription, onUpdate, onDelete }: Subscript
         )}
         <div
           className={`absolute top-0 left-0 h-1 w-full ${
-            urgency === 'critical'
+            creditsDisabled
+              ? 'bg-success'
+              : urgency === 'critical'
               ? 'bg-destructive'
               : urgency === 'warning'
               ? 'bg-warning'
