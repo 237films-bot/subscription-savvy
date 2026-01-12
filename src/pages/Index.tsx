@@ -34,14 +34,8 @@ const Index = () => {
     }
   );
 
-  // Calculate total monthly cost (convert annual to monthly)
-  const totalMonthly = subscriptions.reduce((sum, sub) => {
-    const price = Number(sub.price);
-    if (sub.billing_cycle === 'annual') {
-      return sum + (price / 12);
-    }
-    return sum + price;
-  }, 0);
+  // Calculate total monthly cost (user enters monthly price for all subscriptions)
+  const totalMonthly = subscriptions.reduce((sum, sub) => sum + Number(sub.price), 0);
 
   return (
     <div className="min-h-screen bg-background">
