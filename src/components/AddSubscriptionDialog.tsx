@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Subscription } from '@/types/subscription';
+import { Subscription, CATEGORIES, MONTHS, BillingCycle, SubscriptionCategory } from '@/types/subscription';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Plus } from 'lucide-react';
 
 interface AddSubscriptionDialogProps {
@@ -23,8 +31,12 @@ export function AddSubscriptionDialog({ onAdd }: AddSubscriptionDialogProps) {
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('🤖');
   const [renewalDay, setRenewalDay] = useState('1');
+  const [renewalMonth, setRenewalMonth] = useState('1');
   const [price, setPrice] = useState('');
   const [creditsTotal, setCreditsTotal] = useState('');
+  const [category, setCategory] = useState<SubscriptionCategory>('IA');
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
+  const [trialEndDate, setTrialEndDate] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,17 +47,26 @@ export function AddSubscriptionDialog({ onAdd }: AddSubscriptionDialogProps) {
       name,
       icon,
       renewal_day: parseInt(renewalDay, 10),
+      renewal_month: billingCycle === 'annual' ? parseInt(renewalMonth, 10) : undefined,
       price: parseFloat(price),
       credits_total: parseInt(creditsTotal, 10),
       credits_remaining: parseInt(creditsTotal, 10),
       currency: '€',
+      category,
+      billing_cycle: billingCycle,
+      trial_end_date: trialEndDate || undefined,
     });
 
+    // Reset form
     setName('');
     setIcon('🤖');
     setRenewalDay('1');
+    setRenewalMonth('1');
     setPrice('');
     setCreditsTotal('');
+    setCategory('IA');
+    setBillingCycle('monthly');
+    setTrialEndDate('');
     setOpen(false);
   };
 
@@ -57,9 +78,9 @@ export function AddSubscriptionDialog({ onAdd }: AddSubscriptionDialogProps) {
           Ajouter un abonnement
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nouvel abonnement IA</DialogTitle>
+          <DialogTitle>Nouvel abonnement</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -91,6 +112,42 @@ export function AddSubscriptionDialog({ onAdd }: AddSubscriptionDialogProps) {
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label>Catégorie</Label>
+            <Select value={category} onValueChange={(v) => setCategory(v as SubscriptionCategory)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((cat) => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Billing Cycle Toggle */}
+          <div className="flex items-center justify-between p-3 rounded-md bg-accent/50">
+            <div>
+              <Label>Cycle de facturation</Label>
+              <p className="text-xs text-muted-foreground">
+                {billingCycle === 'monthly' ? 'Renouvellement mensuel' : 'Renouvellement annuel'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-sm ${billingCycle === 'monthly' ? 'text-foreground' : 'text-muted-foreground'}`}>
+                Mensuel
+              </span>
+              <Switch
+                checked={billingCycle === 'annual'}
+                onCheckedChange={(checked) => setBillingCycle(checked ? 'annual' : 'monthly')}
+              />
+              <span className={`text-sm ${billingCycle === 'annual' ? 'text-foreground' : 'text-muted-foreground'}`}>
+                Annuel
+              </span>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="renewalDay">Jour de renouvellement</Label>
@@ -104,22 +161,43 @@ export function AddSubscriptionDialog({ onAdd }: AddSubscriptionDialogProps) {
                 required
               />
             </div>
+            {billingCycle === 'annual' && (
+              <div className="space-y-2">
+                <Label>Mois de renouvellement</Label>
+                <Select value={renewalMonth} onValueChange={setRenewalMonth}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MONTHS.map((month, index) => (
+                      <SelectItem key={index} value={(index + 1).toString()}>
+                        {month}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
-              <Label htmlFor="price">Prix (€/mois)</Label>
+              <Label htmlFor="price">
+                Prix ({billingCycle === 'monthly' ? '€/mois' : '€/an'})
+              </Label>
               <Input
                 id="price"
                 type="number"
                 step="0.01"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                placeholder="20"
+                placeholder={billingCycle === 'monthly' ? '20' : '200'}
                 required
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="credits">Crédits mensuels</Label>
+            <Label htmlFor="credits">
+              Crédits {billingCycle === 'monthly' ? 'mensuels' : 'annuels'}
+            </Label>
             <Input
               id="credits"
               type="number"
@@ -128,6 +206,20 @@ export function AddSubscriptionDialog({ onAdd }: AddSubscriptionDialogProps) {
               placeholder="100"
               required
             />
+          </div>
+
+          {/* Trial End Date */}
+          <div className="space-y-2">
+            <Label htmlFor="trial">Fin de période d'essai (optionnel)</Label>
+            <Input
+              id="trial"
+              type="date"
+              value={trialEndDate}
+              onChange={(e) => setTrialEndDate(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Laissez vide si pas de période d'essai
+            </p>
           </div>
 
           <Button type="submit" className="w-full">

@@ -7,11 +7,16 @@ interface RenewalTimelineProps {
 
 export function RenewalTimeline({ subscriptions }: RenewalTimelineProps) {
   const sorted = [...subscriptions]
-    .map((sub) => ({
-      ...sub,
-      daysUntil: getDaysUntilRenewal(sub.renewal_day),
-      renewalDate: getNextRenewalDate(sub.renewal_day),
-    }))
+    .map((sub) => {
+      const billingCycle = sub.billing_cycle || 'monthly';
+      const isAnnual = billingCycle === 'annual';
+      return {
+        ...sub,
+        daysUntil: getDaysUntilRenewal(sub.renewal_day, billingCycle, sub.renewal_month),
+        renewalDate: getNextRenewalDate(sub.renewal_day, billingCycle, sub.renewal_month),
+        isAnnual,
+      };
+    })
     .sort((a, b) => a.daysUntil - b.daysUntil);
 
   return (
@@ -36,7 +41,9 @@ export function RenewalTimeline({ subscriptions }: RenewalTimelineProps) {
               />
               <span className="text-lg">{sub.icon}</span>
               <span className="flex-1 text-sm font-medium text-foreground">{sub.name}</span>
-              <span className="text-sm text-muted-foreground">{formatDate(sub.renewalDate)}</span>
+              <span className="text-sm text-muted-foreground">
+                {formatDate(sub.renewalDate, sub.isAnnual)}
+              </span>
               <span
                 className={`text-sm font-semibold min-w-[3rem] text-right ${
                   urgency === 'critical'

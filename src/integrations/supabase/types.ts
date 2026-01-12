@@ -14,8 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      credit_history: {
+        Row: {
+          credits_total: number
+          credits_used: number
+          id: string
+          recorded_at: string
+          subscription_id: string | null
+          user_id: string
+        }
+        Insert: {
+          credits_total: number
+          credits_used: number
+          id?: string
+          recorded_at?: string
+          subscription_id?: string | null
+          user_id: string
+        }
+        Update: {
+          credits_total?: number
+          credits_used?: number
+          id?: string
+          recorded_at?: string
+          subscription_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_history_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
+          billing_cycle: string | null
+          category: string | null
           created_at: string
           credits_remaining: number
           credits_total: number
@@ -26,10 +63,14 @@ export type Database = {
           name: string
           price: number
           renewal_day: number
+          renewal_month: number | null
+          trial_end_date: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          billing_cycle?: string | null
+          category?: string | null
           created_at?: string
           credits_remaining?: number
           credits_total?: number
@@ -40,10 +81,14 @@ export type Database = {
           name: string
           price?: number
           renewal_day: number
+          renewal_month?: number | null
+          trial_end_date?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          billing_cycle?: string | null
+          category?: string | null
           created_at?: string
           credits_remaining?: number
           credits_total?: number
@@ -54,6 +99,8 @@ export type Database = {
           name?: string
           price?: number
           renewal_day?: number
+          renewal_month?: number | null
+          trial_end_date?: string | null
           updated_at?: string
           user_id?: string
         }

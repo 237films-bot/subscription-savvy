@@ -1,18 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { Subscription, BillingCycle, SubscriptionCategory } from '@/types/subscription';
 
-export interface Subscription {
-  id: string;
-  name: string;
-  icon: string;
-  renewal_day: number;
-  price: number;
-  credits_total: number;
-  credits_remaining: number;
-  currency: string;
-  last_reset_date?: string;
-}
+export type { Subscription };
 
 export function useSubscriptions() {
   const { user } = useAuth();
@@ -23,11 +14,24 @@ export function useSubscriptions() {
     const today = new Date();
     const lastReset = subscription.last_reset_date ? new Date(subscription.last_reset_date) : null;
     const renewalDay = subscription.renewal_day;
+    const billingCycle = subscription.billing_cycle || 'monthly';
+    const renewalMonth = subscription.renewal_month;
     
-    // Calculate the last renewal date
-    let lastRenewalDate = new Date(today.getFullYear(), today.getMonth(), renewalDay);
-    if (lastRenewalDate > today) {
-      lastRenewalDate.setMonth(lastRenewalDate.getMonth() - 1);
+    let lastRenewalDate: Date;
+    
+    if (billingCycle === 'annual' && renewalMonth) {
+      // Annual: specific day and month
+      const monthIndex = renewalMonth - 1;
+      lastRenewalDate = new Date(today.getFullYear(), monthIndex, renewalDay);
+      if (lastRenewalDate > today) {
+        lastRenewalDate = new Date(today.getFullYear() - 1, monthIndex, renewalDay);
+      }
+    } else {
+      // Monthly
+      lastRenewalDate = new Date(today.getFullYear(), today.getMonth(), renewalDay);
+      if (lastRenewalDate > today) {
+        lastRenewalDate.setMonth(lastRenewalDate.getMonth() - 1);
+      }
     }
     
     // Check if we need to reset (last reset was before the last renewal date)
@@ -69,7 +73,7 @@ export function useSubscriptions() {
 
     // Check and reset credits for each subscription
     const updatedSubscriptions = await Promise.all(
-      (data || []).map(sub => checkAndResetCredits(sub))
+      (data || []).map(sub => checkAndResetCredits(sub as Subscription))
     );
     
     setSubscriptions(updatedSubscriptions);
@@ -110,7 +114,7 @@ export function useSubscriptions() {
     if (error) {
       console.error('Error adding subscription:', error);
     } else if (data) {
-      setSubscriptions((prev) => [...prev, data]);
+      setSubscriptions((prev) => [...prev, data as Subscription]);
     }
   };
 
