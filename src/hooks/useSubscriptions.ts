@@ -11,12 +11,43 @@ export interface Subscription {
   credits_total: number;
   credits_remaining: number;
   currency: string;
+  last_reset_date?: string;
 }
 
 export function useSubscriptions() {
   const { user } = useAuth();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const checkAndResetCredits = async (subscription: Subscription) => {
+    const today = new Date();
+    const lastReset = subscription.last_reset_date ? new Date(subscription.last_reset_date) : null;
+    const renewalDay = subscription.renewal_day;
+    
+    // Calculate the last renewal date
+    let lastRenewalDate = new Date(today.getFullYear(), today.getMonth(), renewalDay);
+    if (lastRenewalDate > today) {
+      lastRenewalDate.setMonth(lastRenewalDate.getMonth() - 1);
+    }
+    
+    // Check if we need to reset (last reset was before the last renewal date)
+    const needsReset = !lastReset || lastReset < lastRenewalDate;
+    
+    if (needsReset && today >= lastRenewalDate) {
+      const todayStr = today.toISOString().split('T')[0];
+      await supabase
+        .from('subscriptions')
+        .update({ 
+          credits_remaining: subscription.credits_total,
+          last_reset_date: todayStr
+        })
+        .eq('id', subscription.id);
+      
+      return { ...subscription, credits_remaining: subscription.credits_total, last_reset_date: todayStr };
+    }
+    
+    return subscription;
+  };
 
   const fetchSubscriptions = async () => {
     if (!user) {
@@ -32,9 +63,16 @@ export function useSubscriptions() {
 
     if (error) {
       console.error('Error fetching subscriptions:', error);
-    } else {
-      setSubscriptions(data || []);
+      setLoading(false);
+      return;
     }
+
+    // Check and reset credits for each subscription
+    const updatedSubscriptions = await Promise.all(
+      (data || []).map(sub => checkAndResetCredits(sub))
+    );
+    
+    setSubscriptions(updatedSubscriptions);
     setLoading(false);
   };
 
