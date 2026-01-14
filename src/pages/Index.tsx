@@ -1,12 +1,12 @@
 import { useSubscriptions } from '@/hooks/useSubscriptions';
-import { useAuth } from '@/hooks/useAuth';
+import { usePassphraseAuth } from '@/hooks/usePassphraseAuth';
 import { SortableSubscriptionCard } from '@/components/SortableSubscriptionCard';
 import { AddSubscriptionDialog } from '@/components/AddSubscriptionDialog';
 import { RenewalTimeline } from '@/components/RenewalTimeline';
 import { CreditUsageChart } from '@/components/CreditUsageChart';
 import { CreditHistoryTable } from '@/components/CreditHistoryTable';
 import { CreditHistoryChart } from '@/components/CreditHistoryChart';
-import { AuthForm } from '@/components/AuthForm';
+import { PassphraseForm } from '@/components/PassphraseForm';
 import { Wallet, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,7 +25,7 @@ import {
 } from '@dnd-kit/sortable';
 
 const Index = () => {
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { isAuthenticated, loading: authLoading, verify, logout } = usePassphraseAuth();
   const { subscriptions, loading: subsLoading, updateSubscription, addSubscription, deleteSubscription, reorderSubscriptions } = useSubscriptions();
 
   const sensors = useSensors(
@@ -54,8 +54,8 @@ const Index = () => {
     );
   }
 
-  if (!user) {
-    return <AuthForm />;
+  if (!isAuthenticated) {
+    return <PassphraseForm onVerify={verify} />;
   }
 
   // Calculate total monthly cost (user enters monthly price for all subscriptions)
@@ -76,7 +76,7 @@ const Index = () => {
           </div>
           <div className="flex items-center gap-2">
             <AddSubscriptionDialog onAdd={addSubscription} />
-            <Button variant="ghost" size="icon" onClick={signOut}>
+            <Button variant="ghost" size="icon" onClick={logout}>
               <LogOut className="h-4 w-4" />
             </Button>
           </div>

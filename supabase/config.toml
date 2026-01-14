@@ -1,1 +1,7 @@
 project_id = "bpmcbmseuokfbpckafjr"
+
+[functions.send-renewal-alerts]
+verify_jwt = false
+
+[functions.verify-passphrase]
+verify_jwt = false
