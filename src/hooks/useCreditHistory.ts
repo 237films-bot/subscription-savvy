@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
+import { usePassphraseAuth } from './usePassphraseAuth';
 
 export interface CreditHistoryEntry {
   id: string;
@@ -17,13 +17,16 @@ export interface MonthlyUsage {
   percentage: number;
 }
 
+// Fixed user_id for passphrase-based auth (shared app)
+const SHARED_USER_ID = '00000000-0000-0000-0000-000000000000';
+
 export function useCreditHistory() {
-  const { user } = useAuth();
+  const { isAuthenticated } = usePassphraseAuth();
   const [history, setHistory] = useState<CreditHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchHistory = async () => {
-    if (!user) {
+    if (!isAuthenticated) {
       setHistory([]);
       setLoading(false);
       return;
@@ -32,7 +35,6 @@ export function useCreditHistory() {
     const { data, error } = await supabase
       .from('credit_history')
       .select('*')
-      .eq('user_id', user.id)
       .order('recorded_at', { ascending: true });
 
     if (error) {
@@ -45,16 +47,16 @@ export function useCreditHistory() {
 
   useEffect(() => {
     fetchHistory();
-  }, [user]);
+  }, [isAuthenticated]);
 
   const recordUsage = async (subscriptionId: string, creditsUsed: number, creditsTotal: number) => {
-    if (!user) return;
+    if (!isAuthenticated) return;
 
     const { error } = await supabase
       .from('credit_history')
       .insert({
         subscription_id: subscriptionId,
-        user_id: user.id,
+        user_id: SHARED_USER_ID,
         credits_used: creditsUsed,
         credits_total: creditsTotal,
       });
