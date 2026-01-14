@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
+import { usePassphraseAuth } from './usePassphraseAuth';
 import { Subscription, BillingCycle, SubscriptionCategory } from '@/types/subscription';
 
 export type { Subscription };
 
+// Fixed user_id for passphrase-based auth (shared app)
+const SHARED_USER_ID = '00000000-0000-0000-0000-000000000000';
+
 export function useSubscriptions() {
-  const { user } = useAuth();
+  const { isAuthenticated } = usePassphraseAuth();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,7 +48,7 @@ export function useSubscriptions() {
           .from('credit_history')
           .insert({
             subscription_id: subscription.id,
-            user_id: user?.id,
+            user_id: SHARED_USER_ID,
             credits_used: creditsUsed,
             credits_total: subscription.credits_total,
           });
@@ -67,7 +70,7 @@ export function useSubscriptions() {
   };
 
   const fetchSubscriptions = async () => {
-    if (!user) {
+    if (!isAuthenticated) {
       setSubscriptions([]);
       setLoading(false);
       return;
@@ -96,7 +99,7 @@ export function useSubscriptions() {
 
   useEffect(() => {
     fetchSubscriptions();
-  }, [user]);
+  }, [isAuthenticated]);
 
   const updateSubscription = async (id: string, updates: Partial<Subscription>) => {
     const { error } = await supabase
@@ -114,7 +117,7 @@ export function useSubscriptions() {
   };
 
   const addSubscription = async (subscription: Omit<Subscription, 'id'>) => {
-    if (!user) return;
+    if (!isAuthenticated) return;
 
     // Get max position
     const maxPosition = subscriptions.length > 0 
@@ -125,7 +128,7 @@ export function useSubscriptions() {
       .from('subscriptions')
       .insert({
         ...subscription,
-        user_id: user.id,
+        user_id: SHARED_USER_ID,
         position: maxPosition,
       })
       .select()
